@@ -11,9 +11,10 @@
             --burgundy: #800020; /* Dark Red/Burgundy */
         }
         
-        /* Apply custom font and scroll-snapping for the full page experience */
-        .fancy-title {
-            font-family: 'Great Vibes', cursive;
+        /* Apply simpler font for the title and primary colors */
+        /* Changed to a clean, universal sans-serif font */
+        .simple-title {
+            font-family: sans-serif;
             color: var(--burgundy);
         }
 
@@ -65,10 +66,10 @@
 </head>
 <body class="bg-black text-white">
 
-    <!-- Title Header: Modified for transparency and smaller vertical height -->
-    <!-- The header now uses p-2 (padding) and bg-black/50 (50% transparency) -->
+    <!-- Title Header: Small, transparent, and simple font -->
     <div class="fixed top-0 left-0 right-0 z-50 p-2 text-center bg-black/50 shadow-lg">
-        <h1 class="fancy-title text-3xl sm:text-5xl">DON'T THINK, JUST STROKE</h1>
+        <!-- Reduced font size to text-xl sm:text-2xl for single line fit -->
+        <h1 class="simple-title text-xl sm:text-2xl font-bold uppercase tracking-wider">DON'T THINK, JUST STROKE</h1>
     </div>
 
     <!-- Initial Overlay to handle Autoplay and Mute Constraints -->
@@ -97,7 +98,6 @@
     </div>
 
     <!-- Main Container where videos will be injected -->
-    <!-- Adjusted mt-value to match the smaller header size -->
     <div id="video-feed" class="mt-[60px]"> 
         <!-- Videos will be dynamically injected here -->
     </div>
@@ -186,7 +186,7 @@
             // Add a final 'End of Feed' marker
             const endMarker = document.createElement('div');
             endMarker.className = 'video-snap-container flex-col bg-black/70';
-            endMarker.innerHTML = `<h2 class="text-4xl fancy-title text-white">End of DON'T THINK, JUST STROKE</h2>
+            endMarker.innerHTML = `<h2 class="text-4xl simple-title text-white">End of DON'T THINK, JUST STROKE</h2>
                                    <p class="text-gray-500 mt-4">Scroll up to view videos again.</p>`;
             videoFeed.appendChild(endMarker);
         }
