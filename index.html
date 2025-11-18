@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GOON STASH</title>
+    <title>DON'T THINK, JUST STROKE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
     <style>
@@ -65,9 +65,10 @@
 </head>
 <body class="bg-black text-white">
 
-    <!-- Title Header -->
-    <div class="fixed top-0 left-0 right-0 z-50 p-4 text-center bg-black/70 shadow-lg">
-        <h1 class="fancy-title text-5xl sm:text-7xl">GOON STASH</h1>
+    <!-- Title Header: Modified for transparency and smaller vertical height -->
+    <!-- The header now uses p-2 (padding) and bg-black/50 (50% transparency) -->
+    <div class="fixed top-0 left-0 right-0 z-50 p-2 text-center bg-black/50 shadow-lg">
+        <h1 class="fancy-title text-3xl sm:text-5xl">DON'T THINK, JUST STROKE</h1>
     </div>
 
     <!-- Initial Overlay to handle Autoplay and Mute Constraints -->
@@ -96,7 +97,8 @@
     </div>
 
     <!-- Main Container where videos will be injected -->
-    <div id="video-feed" class="mt-20">
+    <!-- Adjusted mt-value to match the smaller header size -->
+    <div id="video-feed" class="mt-[60px]"> 
         <!-- Videos will be dynamically injected here -->
     </div>
 
@@ -120,14 +122,12 @@
          */
         async function fetchVideoManifest() {
             try {
-                // Fetch the JSON file from the server (GitHub Pages)
                 const response = await fetch(MANIFEST_URL);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const data = await response.json();
                 
-                // Validate that the returned data is an array of strings
                 if (Array.isArray(data) && data.every(item => typeof item === 'string')) {
                     VIDEO_FILES = data;
                     loadingIndicator.classList.add('hidden');
@@ -136,7 +136,6 @@
                     throw new Error("Manifest is not a valid array of strings.");
                 }
             } catch (error) {
-                // Display error message if the file cannot be loaded or is invalid
                 console.error("Failed to fetch video manifest:", error);
                 loadingIndicator.classList.add('hidden');
                 errorContent.classList.remove('hidden');
@@ -163,7 +162,6 @@
             video.setAttribute('playsinline', ''); 
             video.controls = false; 
 
-            // Core logic: when the video ends, move to the next one
             video.addEventListener('ended', handleVideoEnd);
 
             container.appendChild(video);
@@ -188,7 +186,7 @@
             // Add a final 'End of Feed' marker
             const endMarker = document.createElement('div');
             endMarker.className = 'video-snap-container flex-col bg-black/70';
-            endMarker.innerHTML = `<h2 class="text-4xl fancy-title text-white">End of GOON STASH</h2>
+            endMarker.innerHTML = `<h2 class="text-4xl fancy-title text-white">End of DON'T THINK, JUST STROKE</h2>
                                    <p class="text-gray-500 mt-4">Scroll up to view videos again.</p>`;
             videoFeed.appendChild(endMarker);
         }
