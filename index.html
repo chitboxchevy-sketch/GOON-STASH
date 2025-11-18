@@ -4,7 +4,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DON'T THINK, JUST STROKE</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
     <style>
         /* Custom Tailwind Configuration */
         :root {
@@ -12,7 +11,6 @@
         }
         
         /* Apply simpler font for the title and primary colors */
-        /* Changed to a clean, universal sans-serif font */
         .simple-title {
             font-family: sans-serif;
             color: var(--burgundy);
@@ -68,7 +66,6 @@
 
     <!-- Title Header: Small, transparent, and simple font -->
     <div class="fixed top-0 left-0 right-0 z-50 p-2 text-center bg-black/50 shadow-lg">
-        <!-- Reduced font size to text-xl sm:text-2xl for single line fit -->
         <h1 class="simple-title text-xl sm:text-2xl font-bold uppercase tracking-wider">DON'T THINK, JUST STROKE</h1>
     </div>
 
@@ -143,59 +140,11 @@
         }
 
         /**
-         * Converts a video filename (or URL) into an HTML video element.
-         * @param {string} src - The source URL or filename of the video.
-         * @param {number} index - The index in the array, used for unique IDs.
-         * @returns {HTMLElement} The created video container element.
-         */
-        function createVideoElement(src, index) {
-            const container = document.createElement('div');
-            container.id = `video-container-${index}`;
-            container.className = 'video-snap-container';
-
-            const video = document.createElement('video');
-            video.id = `video-${index}`;
-            video.className = 'scroll-video';
-            video.src = src;
-            video.loop = false;
-            video.muted = true; 
-            video.setAttribute('playsinline', ''); 
-            video.controls = false; 
-
-            video.addEventListener('ended', handleVideoEnd);
-
-            container.appendChild(video);
-            return container;
-        }
-
-        /**
-         * Loads all videos into the DOM based on the fetched list.
-         */
-        function loadVideos() {
-            if (VIDEO_FILES.length === 0) {
-                 console.log("No videos found in manifest.");
-                 errorContent.classList.remove('hidden');
-                 return;
-            }
-
-            VIDEO_FILES.forEach((file, index) => {
-                const videoContainer = createVideoElement(file, index);
-                videoFeed.appendChild(videoContainer);
-            });
-
-            // Add a final 'End of Feed' marker
-            const endMarker = document.createElement('div');
-            endMarker.className = 'video-snap-container flex-col bg-black/70';
-            endMarker.innerHTML = `<h2 class="text-4xl simple-title text-white">End of DON'T THINK, JUST STROKE</h2>
-                                   <p class="text-gray-500 mt-4">Scroll up to view videos again.</p>`;
-            videoFeed.appendChild(endMarker);
-        }
-
-        /**
          * Attempts to play a specific video and handles scrolling.
          * @param {number} index - The index of the video to play.
          */
         function playVideo(index) {
+            // Check if we've reached the end of the playlist
             if (index >= VIDEO_FILES.length) {
                 const endContainer = document.querySelector('.video-snap-container:last-child');
                 endContainer.scrollIntoView({ behavior: 'smooth' });
@@ -228,10 +177,68 @@
 
         /**
          * Handler called when a video finishes playing.
+         * Now accepts the index of the video that finished.
          */
-        function handleVideoEnd() {
-            currentVideoIndex++;
-            playVideo(currentVideoIndex);
+        function handleVideoEnd(endedIndex) {
+            // Only advance if the video that ended is the one we expected to finish
+            if (endedIndex === currentVideoIndex) {
+                currentVideoIndex++;
+                playVideo(currentVideoIndex);
+            }
+            // If the user manually scrolled back and a previous video finished, we ignore the event.
+        }
+
+
+        /**
+         * Converts a video filename (or URL) into an HTML video element.
+         * @param {string} src - The source URL or filename of the video.
+         * @param {number} index - The index in the array, used for unique IDs.
+         * @returns {HTMLElement} The created video container element.
+         */
+        function createVideoElement(src, index) {
+            const container = document.createElement('div');
+            container.id = `video-container-${index}`;
+            container.className = 'video-snap-container';
+
+            const video = document.createElement('video');
+            video.id = `video-${index}`;
+            video.className = 'scroll-video';
+            video.src = src;
+            video.loop = false;
+            video.muted = true; 
+            video.setAttribute('playsinline', ''); 
+            video.controls = false; 
+
+            // FIX: Attach an anonymous function that captures the index and calls the handler
+            video.addEventListener('ended', function() {
+                handleVideoEnd(index);
+            });
+
+            container.appendChild(video);
+            return container;
+        }
+
+        /**
+         * Loads all videos into the DOM based on the fetched list.
+         */
+        function loadVideos() {
+            if (VIDEO_FILES.length === 0) {
+                 console.log("No videos found in manifest.");
+                 errorContent.classList.remove('hidden');
+                 return;
+            }
+
+            VIDEO_FILES.forEach((file, index) => {
+                const videoContainer = createVideoElement(file, index);
+                videoFeed.appendChild(videoContainer);
+            });
+
+            // Add a final 'End of Feed' marker
+            const endMarker = document.createElement('div');
+            endMarker.className = 'video-snap-container flex-col bg-black/70';
+            endMarker.innerHTML = `<h2 class="text-4xl simple-title text-white">End of DON'T THINK, JUST STROKE</h2>
+                                   <p class="text-gray-500 mt-4">Scroll up to view videos again.</p>`;
+            videoFeed.appendChild(endMarker);
         }
 
         /**
@@ -272,6 +279,7 @@
 
                 document.querySelectorAll('.video-snap-container').forEach((container, index) => {
                     const rect = container.getBoundingClientRect();
+                    // Determine which video is currently centered in the viewport
                     if (rect.top < window.innerHeight / 2 && rect.bottom > window.innerHeight / 2) {
                         newIndex = index;
                     }
