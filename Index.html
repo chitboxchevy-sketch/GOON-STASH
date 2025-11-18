@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GOON STASH</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
+    <style>
+        /* Custom Tailwind Configuration */
+        :root {
+            --burgundy: #800020; /* Dark Red/Burgundy */
+        }
+        
+        /* Apply custom font and scroll-snapping for the full page experience */
+        .fancy-title {
+            font-family: 'Great Vibes', cursive;
+            color: var(--burgundy);
+        }
+
+        /* Enforce smooth, page-by-page vertical scrolling */
+        body {
+            background-color: black;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+        }
+
+        /* Each video container takes up exactly one screen height */
+        .video-snap-container {
+            height: 100vh;
+            width: 100vw;
+            scroll-snap-align: start;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* Style the video element itself */
+        .scroll-video {
+            max-width: 100vw;
+            max-height: 100vh;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+
+        /* Hide the initial overlay and loading state */
+        .hidden { display: none !important; }
+
+        /* Spinner style for loading */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid var(--burgundy);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-black text-white">
+
+    <!-- Title Header -->
+    <div class="fixed top-0 left-0 right-0 z-50 p-4 text-center bg-black/70 shadow-lg">
+        <h1 class="fancy-title text-5xl sm:text-7xl">GOON STASH</h1>
+    </div>
+
+    <!-- Initial Overlay to handle Autoplay and Mute Constraints -->
+    <div id="initial-overlay" class="fixed inset-0 z-50 flex flex-col justify-center items-center bg-black/95 transition-opacity duration-500">
+        <div id="loading-indicator" class="flex flex-col items-center">
+             <div class="spinner mb-4"></div>
+             <p class="text-xl text-white">Loading Video Manifest...</p>
+        </div>
+        
+        <div id="start-content" class="hidden flex flex-col items-center">
+            <h2 class="text-3xl sm:text-4xl text-white mb-8">Ready to Start?</h2>
+            <button id="start-button" class="px-8 py-4 text-xl sm:text-2xl font-bold rounded-xl shadow-2xl transition-all duration-300 transform hover:scale-105"
+                style="background-color: var(--burgundy); color: white; border: 2px solid var(--burgundy);">
+                Click to Start & Unmute
+            </button>
+            <p class="mt-8 text-sm text-gray-400 max-w-xs text-center">
+                (Browsers require a user interaction to play video/audio.)
+            </p>
+        </div>
+
+        <div id="error-content" class="hidden flex flex-col items-center p-8 bg-black rounded-lg border border-red-800">
+            <h2 class="text-3xl sm:text-4xl text-red-600 mb-4">Error Loading Videos</h2>
+            <p class="text-white text-center">Could not load <code>video_manifest.json</code>.</p>
+            <p class="text-gray-400 text-sm mt-2 text-center">Please ensure the file exists in your repository root and contains a valid JSON array of video file paths.</p>
+        </div>
+    </div>
+
+    <!-- Main Container where videos will be injected -->
+    <div id="video-feed" class="mt-20">
+        <!-- Videos will be dynamically injected here -->
+    </div>
+
+    <script>
+        // --- 1. CONFIGURATION ---
+        // This array will be populated dynamically from video_manifest.json
+        let VIDEO_FILES = []; 
+        const MANIFEST_URL = 'video_manifest.json';
+        
+        // --- 2. STATE AND CONSTANTS ---
+        let currentVideoIndex = 0;
+        const videoFeed = document.getElementById('video-feed');
+        const startButton = document.getElementById('start-button');
+        const overlay = document.getElementById('initial-overlay');
+        const startContent = document.getElementById('start-content');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const errorContent = document.getElementById('error-content');
+
+        /**
+         * Fetches the list of video files from the manifest JSON.
+         */
+        async function fetchVideoManifest() {
+            try {
+                // Fetch the JSON file from the server (GitHub Pages)
+                const response = await fetch(MANIFEST_URL);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                // Validate that the returned data is an array of strings
+                if (Array.isArray(data) && data.every(item => typeof item === 'string')) {
+                    VIDEO_FILES = data;
+                    loadingIndicator.classList.add('hidden');
+                    startContent.classList.remove('hidden');
+                } else {
+                    throw new Error("Manifest is not a valid array of strings.");
+                }
+            } catch (error) {
+                // Display error message if the file cannot be loaded or is invalid
+                console.error("Failed to fetch video manifest:", error);
+                loadingIndicator.classList.add('hidden');
+                errorContent.classList.remove('hidden');
+            }
+        }
+
+        /**
+         * Converts a video filename (or URL) into an HTML video element.
+         * @param {string} src - The source URL or filename of the video.
+         * @param {number} index - The index in the array, used for unique IDs.
+         * @returns {HTMLElement} The created video container element.
+         */
+        function createVideoElement(src, index) {
+            const container = document.createElement('div');
+            container.id = `video-container-${index}`;
+            container.className = 'video-snap-container';
+
+            const video = document.createElement('video');
+            video.id = `video-${index}`;
+            video.className = 'scroll-video';
+            video.src = src;
+            video.loop = false;
+            video.muted = true; 
+            video.setAttribute('playsinline', ''); 
+            video.controls = false; 
+
+            // Core logic: when the video ends, move to the next one
+            video.addEventListener('ended', handleVideoEnd);
+
+            container.appendChild(video);
+            return container;
+        }
+
+        /**
+         * Loads all videos into the DOM based on the fetched list.
+         */
+        function loadVideos() {
+            if (VIDEO_FILES.length === 0) {
+                 console.log("No videos found in manifest.");
+                 errorContent.classList.remove('hidden');
+                 return;
+            }
+
+            VIDEO_FILES.forEach((file, index) => {
+                const videoContainer = createVideoElement(file, index);
+                videoFeed.appendChild(videoContainer);
+            });
+
+            // Add a final 'End of Feed' marker
+            const endMarker = document.createElement('div');
+            endMarker.className = 'video-snap-container flex-col bg-black/70';
+            endMarker.innerHTML = `<h2 class="text-4xl fancy-title text-white">End of GOON STASH</h2>
+                                   <p class="text-gray-500 mt-4">Scroll up to view videos again.</p>`;
+            videoFeed.appendChild(endMarker);
+        }
+
+        /**
+         * Attempts to play a specific video and handles scrolling.
+         * @param {number} index - The index of the video to play.
+         */
+        function playVideo(index) {
+            if (index >= VIDEO_FILES.length) {
+                const endContainer = document.querySelector('.video-snap-container:last-child');
+                endContainer.scrollIntoView({ behavior: 'smooth' });
+                return;
+            }
+
+            // 1. Scroll to the new video container
+            const currentContainer = document.getElementById(`video-container-${index}`);
+            if (currentContainer) {
+                currentContainer.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            // 2. Start playback
+            const nextVideoElement = document.getElementById(`video-${index}`);
+            if (nextVideoElement) {
+                // Pause and rewind the previous video
+                if (index > 0) {
+                    const prevVideo = document.getElementById(`video-${index - 1}`);
+                    if (prevVideo) {
+                        prevVideo.pause();
+                        prevVideo.currentTime = 0; 
+                    }
+                }
+                
+                nextVideoElement.play().catch(error => {
+                    console.error("Autoplay prevented:", error);
+                });
+            }
+        }
+
+        /**
+         * Handler called when a video finishes playing.
+         */
+        function handleVideoEnd() {
+            currentVideoIndex++;
+            playVideo(currentVideoIndex);
+        }
+
+        /**
+         * Initializes the application after the user interaction.
+         */
+        function initializePlayback() {
+            if (VIDEO_FILES.length === 0) return;
+
+            // Hide the overlay
+            overlay.classList.add('opacity-0');
+            setTimeout(() => overlay.classList.add('hidden'), 500);
+            startButton.removeEventListener('click', initializePlayback);
+
+            // Unmute all video elements for the session
+            document.querySelectorAll('.scroll-video').forEach(video => {
+                video.muted = false;
+            });
+            
+            // Start the first video
+            playVideo(currentVideoIndex);
+        }
+
+        // --- 3. EXECUTION ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            // First, fetch the video list
+            await fetchVideoManifest();
+            
+            // If videos were successfully fetched, load them into the DOM and set up interaction
+            if (VIDEO_FILES.length > 0) {
+                loadVideos();
+                startButton.addEventListener('click', initializePlayback);
+            }
+
+            // OPTIONAL: Add a manual scroll detection to sync state if the user scrolls
+            window.addEventListener('scroll', () => {
+                const centerOfViewport = window.scrollY + window.innerHeight / 2;
+                let newIndex = -1;
+
+                document.querySelectorAll('.video-snap-container').forEach((container, index) => {
+                    const rect = container.getBoundingClientRect();
+                    if (rect.top < window.innerHeight / 2 && rect.bottom > window.innerHeight / 2) {
+                        newIndex = index;
+                    }
+                });
+
+                if (newIndex >= 0 && newIndex < VIDEO_FILES.length && newIndex !== currentVideoIndex) {
+                    // Manually pause the old video
+                    const oldVideo = document.getElementById(`video-${currentVideoIndex}`);
+                    if (oldVideo) {
+                        oldVideo.pause();
+                    }
+                    // Update state and play the new video
+                    currentVideoIndex = newIndex;
+                    playVideo(currentVideoIndex);
+                } else if (newIndex >= VIDEO_FILES.length && currentVideoIndex < VIDEO_FILES.length) {
+                    currentVideoIndex = newIndex;
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>
+
